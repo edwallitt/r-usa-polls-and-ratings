@@ -1,0 +1,164 @@
+---
+title: "USA Election 2020 Polls & Ratings"
+subtitle: "The downfall of Trump..."
+author: "Ed Wallitt"
+date: "Last updated: `r Sys.Date()`"
+output:
+  tufte::tufte_html: default
+  tufte::tufte_handout:
+    citation_package: natbib
+    latex_engine: xelatex
+  tufte::tufte_book:
+    citation_package: natbib
+    latex_engine: xelatex
+bibliography: skeleton.bib
+link-citations: yes
+---
+
+```{r setup, include=FALSE}
+if(!require(pacman))install.packages("pacman")
+
+pacman::p_load('dplyr', 'tidyr', 'gapminder',
+               'ggplot2',  'ggalt',
+               'forcats', 'R.utils', 'png', 
+               'grid', 'ggpubr', 'scales',
+               'bbplot', 'tufte', 'readr', 'knitr', 'ggthemes')
+
+# invalidate cache when the tufte version changes
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tufte'), warning=FALSE, message=FALSE)
+options(htmltools.dir.version = FALSE)
+```
+
+```{r data, include=FALSE}
+toplines <- read_csv('./datasets/covid_approval_polls.csv')
+toplines
+```
+
+
+
+# Introduction
+
+`r newthought('This document aims to track')` the hoped downfall of the Donald Trump. Data is taken from the excellent [FiveThirtyEight](https://fivethirtyeight.com).^[[Polls article](https://projects.fivethirtyeight.com/coronavirus-polls/)]
+
+We are going to use the BBC journalistic styling with Tufte!
+
+```{r, eval=FALSE}
+devtools::install_github('bbc/bbplot')
+```
+
+
+## COVID Approval Ratings
+
+This data is based upon a selection of approval rating of how Trump has handled the coronavirus crisis
+
+```{r}
+data <- toplines %>%
+  group_by(end_date) %>%
+  summarize(
+    approve_mean = mean(approve),
+    disapprove_mean = mean(disapprove),
+    cum_sample_size = sum(sample_size)
+  ) %>%
+  arrange(desc(end_date))
+kable(head(data, n=10), col.names = c("Date", "Mean Approval", "Mean Disapproval", "Total Sample Size"))
+```
+
+## Size of the polls
+
+Let's first examine the distribution of daily poll sample size
+
+```{r}
+ggplot(data, aes(cum_sample_size)) +
+  geom_histogram(bins=30, colour = "white", fill = "#1380A1") +
+  geom_hline(yintercept = 0, size = 1, colour="#333333") +
+  bbc_style() +
+  labs(
+    title = 'Distribution in the size\n of daily opinion polls',
+    x = "Sample Size",
+    y = "Count"
+  )
+```
+
+Most sample size are n < 20000, let's look at those
+
+```{r. fig.margin=TRUE}
+data %>%
+  filter(cum_sample_size < 20000) %>%
+  ggplot(aes(cum_sample_size)) +
+    geom_histogram(bins=60, colour = "white", fill = "#1380A1") +
+    geom_hline(yintercept = 0, size=1, color="#333333") +
+    bbc_style() +
+    labs(
+      title = 'Distribution of polls with \nless than 20,000 participants',
+      x = "Sample Size",
+      y = "Count"
+    )
+```
+
+So while most polls have an **n number** less than 20,000, many of those are less than 5,000
+
+## Changing approval
+
+Let's examine how approval (and disapproval) have changed over time. It would also be good to correlate the most significant changes with key political events.
+
+```{r}
+data %>%
+  ggplot(aes(end_date, approve_mean)) +
+    geom_point(alpha=0.4) +
+    geom_smooth(se=TRUE) +
+    labs(
+      title = "Approval of CV19 Handling over time (daily cumulative)",
+      x = "Date",
+      y = "Approval"
+    ) +
+    bbc_style()
+```
+
+This data is just using the summarised polls for each day, what happens if we use the entire **topline** dataset
+
+```{r}
+toplines %>%
+  ggplot(aes(end_date, approve, size=sample_size)) +
+    geom_point(alpha=0.3, position = 'jitter') +
+    geom_smooth(se=FALSE, color='red') +
+    labs(
+      title = "Trump Approval Ratings",
+      subtitle = "Related to dealing with US Coronavirus",
+      caption = "Source: FiveThirtyEight",
+      x = "Date",
+      y = "Approval %"
+    ) + 
+    ylim(c(0, 100)) +
+    bbc_style()
+```
+
+Looking at the clustering of points we can see that the darker cluster are more centralised - indicating that the majority of opinion is probably here
+
+It's very clear that there are three separate clusters on approval. These are probably down to party political allegiance. Let's look at another version but split by party allegiance.
+
+```{r approval-by-party, out.width="100%", fig.align='center'}
+allegiance <- toplines %>%
+  ggplot(aes(end_date, approve, color=party)) +
+    geom_point(aes(size=sample_size), alpha=0.2) +
+    geom_smooth() +
+    labs(
+      title = "Trump Approval Ratings by \nparty allegiance",
+      caption = "Source: FiveThirtyEight",
+      x = "Date",
+      y = "Approval"
+    ) +
+    theme(legend.position = "bottom", 
+        legend.justification = "left") +
+    guides(fill = guide_legend(reverse = TRUE)) +
+    scale_y_continuous(labels = scales::percent) +
+   theme_fivethirtyeight()
+allegiance
+```
+
+
+
+
+```{r bib, include=FALSE}
+# create a bib file for the R packages used in this document
+knitr::write_bib(c('base', 'rmarkdown'), file = 'skeleton.bib')
+```
