@@ -81,7 +81,7 @@ ggplot(data, aes(cum_sample_size)) +
 
 Most sample size are n < 20000, let's look at those
 
-```{r. fig.margin=TRUE}
+```{r, fig.margin=TRUE}
 data %>%
   filter(cum_sample_size < 20000) %>%
   ggplot(aes(cum_sample_size)) +
@@ -151,7 +151,7 @@ allegiance <- toplines %>%
         legend.justification = "left") +
     guides(fill = guide_legend(reverse = TRUE)) +
     scale_y_continuous(labels = scales::percent) +
-   theme_fivethirtyeight()
+   bbc_style()
 allegiance
 ```
 
